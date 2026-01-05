@@ -26,16 +26,14 @@ const Search = () => {
     }
   };
 
-  // Filter articles based on search query
+  // Filter articles based on search query (search in title, excerpt, tags, author - not full content for speed)
   const filteredArticles = articles
-    .filter(a => a.is_published)
     .filter(a => {
       if (!query) return false;
       const searchLower = query.toLowerCase();
       return (
         a.title.toLowerCase().includes(searchLower) ||
         a.excerpt?.toLowerCase().includes(searchLower) ||
-        a.content?.toLowerCase().includes(searchLower) ||
         a.tags?.some(tag => tag.toLowerCase().includes(searchLower)) ||
         a.author_name?.toLowerCase().includes(searchLower)
       );
@@ -45,7 +43,7 @@ const Search = () => {
       slug: a.slug,
       title: a.title,
       excerpt: a.excerpt || '',
-      content: a.content || '',
+      content: '', // Not needed for display
       image: a.image_url || '/placeholder.svg',
       category: a.category as 'news' | 'analytics' | 'opinions',
       date: a.published_at ? new Date(a.published_at).toLocaleDateString('ru-RU') : '',

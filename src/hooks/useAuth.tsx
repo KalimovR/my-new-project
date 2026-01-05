@@ -10,6 +10,7 @@ interface Profile {
   user_id: string;
   email: string;
   display_name: string | null;
+  is_premium: boolean | null;
 }
 
 interface AuthContextType {
@@ -24,6 +25,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refetchProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -166,6 +168,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isEditor = roles.includes('editor');
   const isAdminOrEditor = isAdmin || isEditor;
 
+  const refetchProfile = async () => {
+    if (user) {
+      const updatedProfile = await fetchProfile(user.id);
+      setProfile(updatedProfile);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -180,6 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signIn,
         signOut,
+        refetchProfile,
       }}
     >
       {children}

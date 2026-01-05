@@ -144,6 +144,73 @@ export type Database = {
           },
         ]
       }
+      chat_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          chat_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          chat_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          chat_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_blocks_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "private_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          chat_id: string
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          sender_id: string
+        }
+        Insert: {
+          chat_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id: string
+        }
+        Update: {
+          chat_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "private_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_bans: {
         Row: {
           banned_by: string | null
@@ -284,29 +351,560 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      content_vote_responses: {
         Row: {
           created_at: string
-          display_name: string | null
-          email: string
           id: string
-          updated_at: string
+          option_index: number
+          user_id: string
+          vote_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          user_id: string
+          vote_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          user_id?: string
+          vote_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_vote_responses_vote_id_fkey"
+            columns: ["vote_id"]
+            isOneToOne: false
+            referencedRelation: "content_votes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_votes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          options: Json
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          options?: Json
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          options?: Json
+          title?: string
+        }
+        Relationships: []
+      }
+      discussion_articles: {
+        Row: {
+          article_id: string
+          created_at: string
+          discussion_id: string
+          id: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          discussion_id: string
+          id?: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          discussion_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_articles_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_articles_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          display_name?: string | null
-          email: string
           id?: string
-          updated_at?: string
+          option_index: number
+          poll_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_polls: {
+        Row: {
+          created_at: string
+          discussion_id: string
+          id: string
+          options: Json
+          question: string
+        }
+        Insert: {
+          created_at?: string
+          discussion_id: string
+          id?: string
+          options?: Json
+          question: string
+        }
+        Update: {
+          created_at?: string
+          discussion_id?: string
+          id?: string
+          options?: Json
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_polls_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_post_votes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_post_votes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_posts: {
+        Row: {
+          content: string
+          created_at: string
+          discussion_id: string
+          dislikes: number | null
+          id: string
+          is_hidden: boolean
+          likes: number | null
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          discussion_id: string
+          dislikes?: number | null
+          id?: string
+          is_hidden?: boolean
+          likes?: number | null
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          discussion_id?: string
+          dislikes?: number | null
+          id?: string
+          is_hidden?: boolean
+          likes?: number | null
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_posts_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_posts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_reports: {
+        Row: {
+          created_at: string
+          id: string
+          is_resolved: boolean
+          post_id: string
+          reason: string
+          reported_by: string
+          resolved_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          post_id: string
+          reason: string
+          reported_by: string
+          resolved_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          post_id?: string
+          reason?: string
+          reported_by?: string
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_premium: boolean
+          round_ends_at: string | null
+          tags: string[] | null
+          teaser: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_premium?: boolean
+          round_ends_at?: string | null
+          tags?: string[] | null
+          teaser?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_premium?: boolean
+          round_ends_at?: string | null
+          tags?: string[] | null
+          teaser?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hall_of_fame: {
+        Row: {
+          created_at: string
+          discussion_id: string
+          id: string
+          likes_count: number
+          post_id: string
+          rank: number
+          user_id: string
+          week_number: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          discussion_id: string
+          id?: string
+          likes_count?: number
+          post_id: string
+          rank: number
+          user_id: string
+          week_number: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          discussion_id?: string
+          id?: string
+          likes_count?: number
+          post_id?: string
+          rank?: number
+          user_id?: string
+          week_number?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_of_fame_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hall_of_fame_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          related_post_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          related_post_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          related_post_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_post_id_fkey"
+            columns: ["related_post_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premium_chat_requests: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          status: string
+          to_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          status?: string
+          to_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          status?: string
+          to_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      private_chats: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          user1_id?: string
+          user2_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          activity_level: number
+          activity_points: number
+          banked_premium_months: number | null
+          created_at: string
+          custom_badge: string | null
+          display_name: string | null
+          email: string
+          email_notifications: boolean | null
+          id: string
+          is_anonymous_allowed: boolean
+          is_premium: boolean | null
+          karma: number
+          premium_expires_at: string | null
+          subscription_cancelled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_level?: number
+          activity_points?: number
+          banked_premium_months?: number | null
+          created_at?: string
+          custom_badge?: string | null
+          display_name?: string | null
+          email: string
+          email_notifications?: boolean | null
+          id?: string
+          is_anonymous_allowed?: boolean
+          is_premium?: boolean | null
+          karma?: number
+          premium_expires_at?: string | null
+          subscription_cancelled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_level?: number
+          activity_points?: number
+          banked_premium_months?: number | null
+          created_at?: string
+          custom_badge?: string | null
           display_name?: string | null
           email?: string
+          email_notifications?: boolean | null
           id?: string
+          is_anonymous_allowed?: boolean
+          is_premium?: boolean | null
+          karma?: number
+          premium_expires_at?: string | null
+          subscription_cancelled?: boolean | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_type: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_type: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          earned_at?: string
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -334,6 +932,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_old_articles: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

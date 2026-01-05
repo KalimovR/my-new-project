@@ -18,9 +18,9 @@ interface SEOHeadProps {
 }
 
 const SITE_NAME = 'Контекст';
-const SITE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://kontekst.news';
+const SITE_URL = 'https://my-new-project-bay-theta.vercel.app';
 const DEFAULT_DESCRIPTION = 'Независимые новости и аналитика 2026. Свежие материалы, расследования и экспертные мнения без корпоративного влияния.';
-const DEFAULT_IMAGE = '/og-image.jpg';
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 export const SEOHead = ({
   title,

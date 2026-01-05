@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, ArrowUpRight, Trash2, Bookmark, BookmarkCheck, Eye } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -38,9 +40,10 @@ interface NewsCardProps {
   showDelete?: boolean;
   onDelete?: (id: string) => void;
   showBookmark?: boolean;
+  className?: string;
 }
 
-export const NewsCard = ({ article, variant = 'default', showDelete = false, onDelete, showBookmark = true }: NewsCardProps) => {
+export const NewsCard = ({ article, variant = 'default', showDelete = false, onDelete, showBookmark = true, className }: NewsCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const { user, isAdminOrEditor } = useAuth();
@@ -137,7 +140,7 @@ export const NewsCard = ({ article, variant = 'default', showDelete = false, onD
     return (
       <Link
         to={`/article/${article.slug}`}
-        className="group relative block overflow-hidden rounded-2xl bg-card border border-border hover-glow hover-lift transition-all duration-300 h-full"
+        className={`group relative block overflow-hidden rounded-2xl bg-card border border-border hover-glow hover-lift transition-all duration-300 h-full ${className || ''}`}
       >
         {showDelete && onDelete && DeleteButton}
         {BookmarkButton}
@@ -205,21 +208,30 @@ export const NewsCard = ({ article, variant = 'default', showDelete = false, onD
           <h4 className="font-bold text-sm leading-snug group-hover:text-primary transition-colors duration-200 line-clamp-2 mb-2">
             {article.title}
           </h4>
-          <p className="text-xs text-muted-foreground">{article.date}</p>
+          <p className="text-xs text-muted-foreground">
+            {(() => {
+              try {
+                const date = typeof article.date === 'string' ? parseISO(article.date) : new Date(article.date);
+                return format(date, 'd MMM yyyy', { locale: ru });
+              } catch {
+                return article.date;
+              }
+            })()}
+          </p>
         </div>
       </Link>
     );
   }
 
-  // Default card - big image style
+  // Default card - big image style with proper flow layout
   return (
     <Link
       to={`/article/${article.slug}`}
-      className="group relative block overflow-hidden rounded-xl sm:rounded-2xl bg-card border border-border hover-glow hover-lift transition-all duration-300"
+      className="group relative flex flex-col overflow-hidden rounded-xl sm:rounded-2xl bg-card border border-border hover-glow hover-lift transition-all duration-300 h-full"
     >
       {showDelete && onDelete && DeleteButton}
       {BookmarkButton}
-      <div className="h-[150px] sm:h-[180px] md:h-auto md:aspect-[4/3] overflow-hidden">
+      <div className="relative h-[150px] sm:h-[180px] md:h-[200px] flex-shrink-0 overflow-hidden">
         <img
           src={article.image}
           alt={`${article.title} — Контекст 2026`}
@@ -228,7 +240,7 @@ export const NewsCard = ({ article, variant = 'default', showDelete = false, onD
           decoding="async"
         />
       </div>
-      <div className="p-4 sm:p-5 md:p-6">
+      <div className="flex flex-col flex-1 p-4 sm:p-5 md:p-6">
         <div className="flex items-center gap-2 mb-2 sm:mb-3">
           {article.tags.slice(0, 2).map((tag) => (
             <Badge 
@@ -242,10 +254,10 @@ export const NewsCard = ({ article, variant = 'default', showDelete = false, onD
         <h3 className="text-base sm:text-lg md:text-xl font-bold leading-snug sm:leading-tight mb-2 sm:mb-3 group-hover:text-primary transition-colors duration-200">
           {article.title}
         </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4">
+        <p className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4 flex-1">
           {article.excerpt}
         </p>
-        <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+        <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground mt-auto">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="font-medium truncate max-w-[100px] sm:max-w-none">{article.author}</span>
             {ViewsIndicator}

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ChevronDown, Mail, Lock, User, Save, Bookmark, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { ChevronDown, Mail, Lock, User, Save, Bookmark, ExternalLink, Bell, BellOff, PartyPopper } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Layout } from '@/components/layout/Layout';
@@ -9,22 +9,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useBookmarks } from '@/hooks/useBookmarks';
+import { GamificationSection } from '@/components/profile/GamificationSection';
+import { PremiumBadge } from '@/components/badges/PremiumBadge';
+import { PremiumSubscriptionCard } from '@/components/premium/PremiumSubscriptionCard';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Некорректный email адрес');
 const passwordSchema = z.string().min(6, 'Пароль должен быть минимум 6 символов');
 
 const Profile = () => {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading, refetchProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [paymentChecking, setPaymentChecking] = useState(false);
 
   const { bookmarks, isLoading: bookmarksLoading, removeBookmark } = useBookmarks();
 
@@ -34,6 +42,95 @@ const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check for successful payment
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success' && user) {
+      setPaymentChecking(true);
+      
+      // Poll for premium status update (webhook might take a moment)
+      const checkPremiumStatus = async () => {
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const poll = async () => {
+          attempts++;
+          const { data } = await supabase
+            .from('profiles')
+            .select('is_premium')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (data?.is_premium) {
+            toast({
+              title: '🎉 Добро пожаловать в премиум!',
+              description: 'Теперь ты Всевидящий. Безлимитные реплики и эксклюзивы — всё твоё!',
+            });
+            refetchProfile?.();
+            setPaymentChecking(false);
+            // Remove payment param from URL
+            setSearchParams({});
+          } else if (attempts < maxAttempts) {
+            setTimeout(poll, 2000);
+          } else {
+            // Payment might be processing
+            toast({
+              title: 'Платёж обрабатывается',
+              description: 'Подписка активируется в течение нескольких минут.',
+            });
+            setPaymentChecking(false);
+            setSearchParams({});
+          }
+        };
+        
+        poll();
+      };
+      
+      checkPremiumStatus();
+    }
+  }, [searchParams, user, toast, setSearchParams, refetchProfile]);
+
+  // Load email notification preference
+  useEffect(() => {
+    if (profile) {
+      // Check if profile has email_notifications field
+      const loadPreference = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('email_notifications')
+          .eq('id', profile.id)
+          .single();
+        if (data?.email_notifications !== undefined) {
+          setEmailNotifications(data.email_notifications);
+        }
+      };
+      loadPreference();
+    }
+  }, [profile]);
+
+  const handleToggleEmailNotifications = async (checked: boolean) => {
+    if (!profile) return;
+    
+    setEmailNotifications(checked);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ email_notifications: checked })
+      .eq('id', profile.id);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setEmailNotifications(!checked);
+    } else {
+      toast({
+        title: checked ? 'Email-уведомления включены' : 'Email-уведомления отключены',
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -175,10 +272,19 @@ const Profile = () => {
         <div className="max-w-2xl mx-auto space-y-4">
           <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-2xl">Личный кабинет</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-2xl">Личный кабинет</CardTitle>
+                {profile?.is_premium && <PremiumBadge size="md" />}
+              </div>
               <p className="text-muted-foreground">{user.email}</p>
             </CardHeader>
           </Card>
+
+          {/* Gamification */}
+          <GamificationSection userId={user.id} />
+
+          {/* Premium Subscription */}
+          <PremiumSubscriptionCard isPremium={profile?.is_premium} />
 
           {/* Закладки */}
           <Collapsible open={bookmarksOpen} onOpenChange={setBookmarksOpen}>
@@ -289,6 +395,49 @@ const Profile = () => {
                       {isSubmitting ? 'Сохранение...' : 'Сохранить'}
                     </Button>
                   </form>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Уведомления */}
+          <Collapsible open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+            <Card className="bg-card border-border">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Bell className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">Уведомления</CardTitle>
+                    </div>
+                    <ChevronDown className={`h-5 w-5 transition-transform ${notificationsOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      {emailNotifications ? (
+                        <Bell className="h-5 w-5 text-primary" />
+                      ) : (
+                        <BellOff className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      <div>
+                        <p className="font-medium">Email-уведомления</p>
+                        <p className="text-sm text-muted-foreground">
+                          Получать уведомления об ответах на ваши посты по email
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={emailNotifications}
+                      onCheckedChange={handleToggleEmailNotifications}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Уведомления в приложении (колокольчик) всегда активны, когда вы залогинены.
+                  </p>
                 </CardContent>
               </CollapsibleContent>
             </Card>

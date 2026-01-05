@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, EyeOff, Users, FileText, Sparkles, Loader2, Link2, ExternalLink, MessageSquare, Mail, Search } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, Edit, Trash2, Eye, EyeOff, Users, FileText, Sparkles, Loader2, Link2, ExternalLink, MessageSquare, Mail, Search, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AIGenerationProgress } from '@/components/admin/AIGenerationProgress';
 import { ModerationTab } from '@/components/admin/ModerationTab';
 import { SubmissionsTab } from '@/components/admin/SubmissionsTab';
+import { DiscussionsTab } from '@/components/admin/DiscussionsTab';
+import { DiscussionModerationTab } from '@/components/admin/DiscussionModerationTab';
 import { OnlineUsersIndicator } from '@/components/admin/OnlineUsersIndicator';
 
 interface Article {
@@ -44,6 +47,7 @@ interface UserWithRole {
   email: string;
   display_name: string | null;
   role: 'admin' | 'editor' | 'user';
+  is_premium: boolean;
 }
 
 interface AISource {
@@ -61,6 +65,7 @@ const Admin = () => {
   const { user, isAdminOrEditor, isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -172,6 +177,7 @@ const Admin = () => {
       return {
         ...profile,
         role: (userRole?.role || 'user') as 'admin' | 'editor' | 'user',
+        is_premium: profile.is_premium || false,
       };
     });
 
@@ -363,6 +369,7 @@ const Admin = () => {
         });
       } else {
         toast({ title: 'Статья обновлена' });
+        queryClient.invalidateQueries({ queryKey: ['articles'] });
         fetchArticles();
         setIsDialogOpen(false);
         resetForm();
@@ -378,6 +385,7 @@ const Admin = () => {
         });
       } else {
         toast({ title: 'Статья создана' });
+        queryClient.invalidateQueries({ queryKey: ['articles'] });
         fetchArticles();
         setIsDialogOpen(false);
         resetForm();
@@ -416,6 +424,7 @@ const Admin = () => {
       });
     } else {
       toast({ title: 'Статья удалена' });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
       fetchArticles();
     }
   };
@@ -436,6 +445,7 @@ const Admin = () => {
         variant: 'destructive',
       });
     } else {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
       fetchArticles();
     }
   };
@@ -467,6 +477,27 @@ const Admin = () => {
       });
     } else {
       toast({ title: 'Роль обновлена' });
+      fetchUsers();
+    }
+  };
+
+  const handleTogglePremium = async (userItem: UserWithRole) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_premium: !userItem.is_premium })
+      .eq('user_id', userItem.user_id);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ 
+        title: userItem.is_premium ? 'Премиум отозван' : 'Премиум выдан',
+        description: `Пользователь ${userItem.display_name || userItem.email}`,
+      });
       fetchUsers();
     }
   };
@@ -832,6 +863,14 @@ const Admin = () => {
               <Mail className="w-4 h-4" />
               Предложка
             </TabsTrigger>
+            <TabsTrigger value="discussions" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Обсуждения
+            </TabsTrigger>
+            <TabsTrigger value="discussion-moderation" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Мод. реплик
+            </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
@@ -970,6 +1009,18 @@ const Admin = () => {
             <SubmissionsTab />
           </TabsContent>
 
+          <TabsContent value="discussions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Управление обсуждениями</CardTitle>
+                <CardDescription>Создание дискуссий и модерация постов</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DiscussionsTab />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {isAdmin && (
             <TabsContent value="users">
               <Card>
@@ -989,25 +1040,46 @@ const Admin = () => {
                           key={u.id}
                           className="flex items-center justify-between p-4 border border-border rounded-lg"
                         >
-                          <div>
-                            <p className="font-medium">{u.display_name || u.email}</p>
-                            <p className="text-sm text-muted-foreground">{u.email}</p>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{u.display_name || u.email}</p>
+                                {u.is_premium && (
+                                  <Badge variant="outline" className="border-primary/50 text-primary">
+                                    <Crown className="w-3 h-3 mr-1" />
+                                    Премиум
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{u.email}</p>
+                            </div>
                           </div>
-                          <Select
-                            value={u.role}
-                            onValueChange={(value) =>
-                              handleRoleChange(u.user_id, value as 'admin' | 'editor' | 'user')
-                            }
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">Пользователь</SelectItem>
-                              <SelectItem value="editor">Редактор</SelectItem>
-                              <SelectItem value="admin">Админ</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant={u.is_premium ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => handleTogglePremium(u)}
+                              className={u.is_premium ? "" : "border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"}
+                            >
+                              <Crown className="w-4 h-4 mr-1" />
+                              {u.is_premium ? 'Отозвать' : 'Выдать премиум'}
+                            </Button>
+                            <Select
+                              value={u.role}
+                              onValueChange={(value) =>
+                                handleRoleChange(u.user_id, value as 'admin' | 'editor' | 'user')
+                              }
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">Пользователь</SelectItem>
+                                <SelectItem value="editor">Редактор</SelectItem>
+                                <SelectItem value="admin">Админ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1016,6 +1088,10 @@ const Admin = () => {
               </Card>
             </TabsContent>
           )}
+
+          <TabsContent value="discussion-moderation">
+            <DiscussionModerationTab />
+          </TabsContent>
 
           {isAdmin && (
             <TabsContent value="sources">

@@ -11,6 +11,8 @@ import News from "./pages/News";
 import Search from "./pages/Search";
 import Analytics from "./pages/Analytics";
 import Opinions from "./pages/Opinions";
+import Discussions from "./pages/Discussions";
+import Discussion from "./pages/Discussion";
 import Article from "./pages/Article";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -37,6 +39,8 @@ const App = () => (
                 <Route path="/search" element={<Search />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/opinions" element={<Opinions />} />
+                <Route path="/obsuzhdeniya" element={<Discussions />} />
+                <Route path="/obsuzhdeniya/:id" element={<Discussion />} />
                 <Route path="/article/:slug" element={<Article />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Article {
@@ -20,41 +20,60 @@ export interface Article {
   views: number | null;
 }
 
-export const useArticles = (category?: string) => {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Lightweight article type for lists (without content)
+export interface ArticlePreview {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  image_url: string | null;
+  category: string;
+  tags: string[];
+  author_name: string | null;
+  read_time: string | null;
+  is_featured: boolean | null;
+  is_published: boolean | null;
+  published_at: string | null;
+  views: number | null;
+}
 
-  const fetchArticles = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+// Select only necessary fields for list views (excludes heavy content field)
+const ARTICLE_LIST_SELECT = 'id,slug,title,excerpt,image_url,category,tags,author_name,read_time,is_featured,is_published,published_at,views';
 
-    let query = supabase
-      .from('articles')
-      .select('*')
-      .eq('is_published', true)
-      .order('published_at', { ascending: false });
+const fetchArticles = async (category?: string, limit?: number): Promise<ArticlePreview[]> => {
+  let query = supabase
+    .from('articles')
+    .select(ARTICLE_LIST_SELECT)
+    .eq('is_published', true)
+    .order('published_at', { ascending: false });
 
-    if (category) {
-      query = query.eq('category', category);
-    }
+  if (category) {
+    query = query.eq('category', category);
+  }
 
-    const { data, error: fetchError } = await query;
+  if (limit) {
+    query = query.limit(limit);
+  }
 
-    if (fetchError) {
-      console.error('Error fetching articles:', fetchError);
-      setError(fetchError.message);
-      setArticles([]);
-    } else {
-      setArticles((data || []) as Article[]);
-    }
+  const { data, error } = await query;
 
-    setIsLoading(false);
-  }, [category]);
+  if (error) {
+    console.error('Error fetching articles:', error);
+    throw error;
+  }
 
-  useEffect(() => {
-    fetchArticles();
-  }, [fetchArticles]);
+  return (data || []) as ArticlePreview[];
+};
+
+export const useArticles = (category?: string, limit?: number) => {
+  const queryClient = useQueryClient();
+  
+  const { data: articles = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['articles', category, limit],
+    queryFn: () => fetchArticles(category, limit),
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+  });
 
   const deleteArticle = async (id: string) => {
     const { error } = await supabase
@@ -67,70 +86,65 @@ export const useArticles = (category?: string) => {
       return { error };
     }
     
-    // Remove from local state
-    setArticles(prev => prev.filter(a => a.id !== id));
+    // Invalidate cache to refresh lists
+    queryClient.invalidateQueries({ queryKey: ['articles'] });
     return { error: null };
   };
 
-  return { articles, isLoading, error, refetch: fetchArticles, deleteArticle };
+  return { 
+    articles: articles as (ArticlePreview & { content?: string | null; created_at?: string; updated_at?: string })[], 
+    isLoading, 
+    error: error?.message || null, 
+    refetch, 
+    deleteArticle 
+  };
+};
+
+const fetchArticleBySlug = async (slug: string): Promise<Article | null> => {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+
+  if (error) {
+    console.error('Error fetching article:', error);
+    throw error;
+  }
+
+  return data as Article;
 };
 
 export const useArticle = (slug: string) => {
-  const [article, setArticle] = useState<Article | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: article = null, isLoading, error } = useQuery({
+    queryKey: ['article', slug],
+    queryFn: () => fetchArticleBySlug(slug),
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
 
-  useEffect(() => {
-    const fetchArticle = async () => {
-      if (!slug) return;
+  return { article, isLoading, error: error?.message || null };
+};
 
-      setIsLoading(true);
-      setError(null);
+const fetchFeaturedArticles = async (): Promise<ArticlePreview[]> => {
+  const { data } = await supabase
+    .from('articles')
+    .select(ARTICLE_LIST_SELECT)
+    .eq('is_published', true)
+    .eq('is_featured', true)
+    .order('published_at', { ascending: false })
+    .limit(5);
 
-      const { data, error: fetchError } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_published', true)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching article:', fetchError);
-        setError(fetchError.message);
-        setArticle(null);
-      } else {
-        setArticle(data as Article);
-      }
-
-      setIsLoading(false);
-    };
-
-    fetchArticle();
-  }, [slug]);
-
-  return { article, isLoading, error };
+  return (data || []) as ArticlePreview[];
 };
 
 export const useFeaturedArticles = () => {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchFeatured = async () => {
-      const { data } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('is_published', true)
-        .eq('is_featured', true)
-        .order('published_at', { ascending: false })
-        .limit(5);
-
-      setArticles((data || []) as Article[]);
-      setIsLoading(false);
-    };
-
-    fetchFeatured();
-  }, []);
+  const { data: articles = [], isLoading } = useQuery({
+    queryKey: ['articles', 'featured'],
+    queryFn: fetchFeaturedArticles,
+    staleTime: 1000 * 60 * 2,
+  });
 
   return { articles, isLoading };
 };

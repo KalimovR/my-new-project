@@ -9,18 +9,19 @@ import { Send, TrendingUp, Mail, CheckCircle } from 'lucide-react';
 export const Sidebar = () => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
-  const { articles } = useArticles();
+  // Limit to 5 articles for sidebar, using cached query
+  const { articles } = useArticles(undefined, 5);
 
-  // Get popular articles with images
+  // Get popular articles with images (already limited and filtered)
+  // Exclude featured materials so they don't duplicate/"съезжают" в сайдбар
   const popularArticles = articles
-    .filter(a => a.is_published)
-    .slice(0, 5)
+    .filter(a => a.is_published && !a.is_featured)
     .map(a => ({
       id: a.id,
       slug: a.slug,
       title: a.title,
       excerpt: a.excerpt || '',
-      content: a.content || '',
+      content: '', // Not needed for compact cards
       image: a.image_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=200&h=200&fit=crop',
       category: a.category as 'news' | 'analytics' | 'opinions',
       date: a.published_at ? new Date(a.published_at).toLocaleDateString('ru-RU') : '',

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { NewsCard } from '@/components/news/NewsCard';
@@ -10,8 +11,9 @@ import { SEOHead } from '@/components/seo/SEOHead';
 import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/seo/StructuredData';
 import { AuthorByline } from '@/components/article/AuthorByline';
 import { RelatedArticles } from '@/components/article/RelatedArticles';
+import { DiscussButton } from '@/components/article/DiscussButton';
 import { useAuth } from '@/hooks/useAuth';
-import { Clock, User, Calendar, ArrowLeft, Share2, Loader2, FileText } from 'lucide-react';
+import { Clock, User, Calendar, ArrowLeft, Share2, Loader2, FileText, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -169,6 +171,35 @@ const Article = () => {
       tags: a.tags || [],
     }));
 
+  // Get daily recommended article - changes every 24 hours
+  const dailyRecommendedArticle = useMemo(() => {
+    const eligibleArticles = allArticles.filter(a => a.slug !== slug && a.is_published);
+    if (eligibleArticles.length === 0) return null;
+    
+    // Use day of year to pick an article - changes daily
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - startOfYear.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    const index = dayOfYear % eligibleArticles.length;
+    const selected = eligibleArticles[index];
+    
+    return {
+      id: selected.id,
+      slug: selected.slug,
+      title: selected.title,
+      excerpt: selected.excerpt || '',
+      content: selected.content || '',
+      image: selected.image_url || '/placeholder.svg',
+      category: selected.category as 'news' | 'analytics' | 'opinions',
+      date: selected.published_at || selected.created_at,
+      author: selected.author_name || 'Редакция',
+      readTime: selected.read_time || '5 мин',
+      tags: selected.tags || [],
+    };
+  }, [allArticles, slug]);
+
   if (isLoading) {
     return (
       <Layout>
@@ -204,12 +235,13 @@ const Article = () => {
   };
 
   const handleShare = (platform: string) => {
+    // Use the canonical article URL - Vercel middleware handles OG for crawlers
     const url = window.location.href;
     const text = article.title;
     
     const shareUrls: Record<string, string> = {
       telegram: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-      twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+      twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text + ' — Контекст')}`,
       vk: `https://vk.com/share.php?url=${encodeURIComponent(url)}&title=${encodeURIComponent(text)}`,
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
     };
@@ -284,90 +316,111 @@ const Article = () => {
         </div>
 
         <div className="container mx-auto -mt-32 relative z-10">
-          <div className="max-w-3xl mx-auto">
-            {/* Back Link */}
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Назад
-            </Link>
+          <div className="grid lg:grid-cols-[1fr_320px] gap-8">
+            {/* Main content */}
+            <div className="max-w-3xl">
+              {/* Back Link */}
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Назад
+              </Link>
 
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {(article.tags || []).map((tag) => (
-                <Badge key={tag} variant="secondary" className="bg-primary/20 text-primary border-0">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Title */}
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6" style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}>
-              {article.title}
-            </h1>
-
-            {/* Author Byline */}
-            <div className="mb-8 pb-8 border-b border-border">
-              <AuthorByline
-                name={article.author_name || 'Редакция Контекст'}
-                bio="Журналист независимого издания Контекст. Пишет о политике, экономике и социальных вопросах."
-                date={formattedDate}
-                readTime={article.read_time || '5 мин'}
-                variant="full"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="prose prose-invert dark:prose-invert max-w-none text-base leading-relaxed" style={{ fontSize: '16px' }}>
-              {renderContent(article.content || '', !isAdminOrEditor)}
-            </div>
-
-            {/* Word count - only for admins/editors */}
-            {isAdminOrEditor && (
-              <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md w-fit">
-                <FileText className="w-4 h-4" />
-                <span>Слов: {countWords(stripWordCount(article.content || ''))}</span>
-              </div>
-            )}
-
-            {/* Internal Links Block */}
-            {inlineRelatedArticles.length > 0 && (
-              <RelatedArticles
-                articles={inlineRelatedArticles}
-                variant="inline"
-              />
-            )}
-
-            {/* Ad in content */}
-            <div className="my-8">
-              <AdBanner size="native" />
-            </div>
-
-            {/* Share */}
-            <div className="flex items-center gap-4 py-8 border-t border-b border-border my-8">
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                <Share2 className="w-4 h-4" />
-                Поделиться:
-              </span>
-              <div className="flex gap-2">
-                {['telegram', 'twitter', 'vk', 'facebook'].map((platform) => (
-                  <Button
-                    key={platform}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleShare(platform)}
-                    className="capitalize"
-                  >
-                    {platform === 'vk' ? 'VK' : platform.charAt(0).toUpperCase() + platform.slice(1)}
-                  </Button>
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(article.tags || []).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="bg-primary/20 text-primary border-0">
+                    {tag}
+                  </Badge>
                 ))}
               </div>
+
+              {/* Title */}
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6" style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}>
+                {article.title}
+              </h1>
+
+              {/* Author Byline */}
+              <div className="mb-8 pb-8 border-b border-border">
+                <AuthorByline
+                  name={article.author_name || 'Редакция Контекст'}
+                  bio="Журналист независимого издания Контекст. Пишет о политике, экономике и социальных вопросах."
+                  date={formattedDate}
+                  readTime={article.read_time || '5 мин'}
+                  variant="full"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="prose prose-invert dark:prose-invert max-w-none text-base leading-relaxed" style={{ fontSize: '16px' }}>
+                {renderContent(article.content || '', !isAdminOrEditor)}
+              </div>
+
+              {/* Word count - only for admins/editors */}
+              {isAdminOrEditor && (
+                <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md w-fit">
+                  <FileText className="w-4 h-4" />
+                  <span>Слов: {countWords(stripWordCount(article.content || ''))}</span>
+                </div>
+              )}
+
+              {/* Internal Links Block */}
+              {inlineRelatedArticles.length > 0 && (
+                <RelatedArticles
+                  articles={inlineRelatedArticles}
+                  variant="inline"
+                />
+              )}
+
+              {/* Ad in content */}
+              <div className="my-8">
+                <AdBanner size="native" />
+              </div>
+
+              {/* Share */}
+              <div className="flex items-center gap-4 py-8 border-t border-b border-border my-8">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Share2 className="w-4 h-4" />
+                  Поделиться:
+                </span>
+                <div className="flex gap-2">
+                  {['telegram', 'twitter', 'vk', 'facebook'].map((platform) => (
+                    <Button
+                      key={platform}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleShare(platform)}
+                      className="capitalize"
+                    >
+                      {platform === 'vk' ? 'VK' : platform.charAt(0).toUpperCase() + platform.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Discuss Button */}
+              <div className="my-8">
+                <DiscussButton articleId={article.id} />
+              </div>
+
+              {/* Comments */}
+              <CommentSection articleId={article.id} />
             </div>
 
-            {/* Comments */}
-            <CommentSection articleId={article.id} />
+            {/* Sidebar with recommended article */}
+            <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
+              {dailyRecommendedArticle && (
+                <div className="bg-card border border-primary/20 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">Рекомендуем</span>
+                  </div>
+                  <NewsCard article={dailyRecommendedArticle} variant="compact" />
+                </div>
+              )}
+            </aside>
           </div>
         </div>
 

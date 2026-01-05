@@ -1,5 +1,6 @@
 import { Layout } from '@/components/layout/Layout';
 import { NewsCard } from '@/components/news/NewsCard';
+import { NewsCardSkeleton } from '@/components/news/NewsCardSkeleton';
 import { Sidebar } from '@/components/news/Sidebar';
 import { useArticles } from '@/hooks/useArticles';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,10 +20,10 @@ const Opinions = () => {
     slug: a.slug,
     title: a.title,
     excerpt: a.excerpt || '',
-    content: a.content || '',
+    content: '', // Not needed for list view
     image: a.image_url || '/placeholder.svg',
     category: a.category as 'news' | 'analytics' | 'opinions',
-    date: formatDate(a.published_at || a.created_at),
+    date: formatDate(a.published_at || a.created_at || ''),
     author: a.author_name || 'Редакция',
     readTime: a.read_time || '5 мин',
     tags: a.tags || [],
@@ -66,8 +67,10 @@ const Opinions = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             {isLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <NewsCardSkeleton key={index} />
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

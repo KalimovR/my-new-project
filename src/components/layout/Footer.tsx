@@ -103,9 +103,17 @@ export const Footer = () => {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Контекст. Все права защищены.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Мнения авторов могут не совпадать с позицией редакции.
-            </p>
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+              <button
+                onClick={() => handleLinkClick('/profile')}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Премиум-подписка: безлимит и эксклюзивы
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Мнения авторов могут не совпадать с позицией редакции.
+              </p>
+            </div>
           </div>
         </div>
       </div>

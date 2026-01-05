@@ -6,6 +6,8 @@ import logoImage from '@/assets/logo-pyramid.png';
 import { Input } from '@/components/ui/input';
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/hooks/useAuth';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { PremiumChatsPanel } from '@/components/premium/PremiumChatsPanel';
 import {
   Sheet,
   SheetContent,
@@ -24,6 +26,7 @@ const navigation = [
   { name: 'Новости', href: '/news' },
   { name: 'Аналитика', href: '/analytics' },
   { name: 'Мнения', href: '/opinions' },
+  { name: 'Обсуждения', href: '/obsuzhdeniya' },
   { name: 'О нас', href: '/about' },
   { name: 'Контакты', href: '/contact' },
 ];
@@ -33,6 +36,7 @@ const getPageName = (pathname: string): string => {
   if (pathname.startsWith('/news')) return 'Новости';
   if (pathname.startsWith('/analytics')) return 'Аналитика';
   if (pathname.startsWith('/opinions')) return 'Мнения';
+  if (pathname.startsWith('/obsuzhdeniya')) return 'Обсуждения';
   if (pathname.startsWith('/about')) return 'О нас';
   if (pathname.startsWith('/contact')) return 'Контакты';
   if (pathname.startsWith('/article')) return 'Статья';
@@ -171,6 +175,12 @@ export const Header = () => {
               <Sun className="h-4 w-4 sm:h-5 sm:w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 sm:h-5 sm:w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
+
+            {/* Notification Bell - only for logged in users */}
+            {user && <NotificationBell />}
+
+            {/* Premium Chats Panel */}
+            {user && <PremiumChatsPanel />}
 
             {/* User Menu */}
             {!isLoading && (

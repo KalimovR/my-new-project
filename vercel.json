@@ -1,6 +1,12 @@
 {
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+  "functions": {
+    "api/og.ts": {
+      "memory": 256,
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    { "source": "/api/og", "destination": "/api/og" },
+    { "source": "/(.*)", "destination": "/" }
   ]
 }

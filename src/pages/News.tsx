@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { NewsCard } from '@/components/news/NewsCard';
+import { NewsCardSkeleton } from '@/components/news/NewsCardSkeleton';
 import { Sidebar } from '@/components/news/Sidebar';
 import { useArticles } from '@/hooks/useArticles';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,10 +34,10 @@ const News = () => {
     slug: a.slug,
     title: a.title,
     excerpt: a.excerpt || '',
-    content: a.content || '',
+    content: '', // Not needed for list view
     image: a.image_url || '/placeholder.svg',
     category: a.category as 'news' | 'analytics' | 'opinions',
-    date: formatDate(a.published_at || a.created_at),
+    date: formatDate(a.published_at || a.created_at || ''),
     author: a.author_name || 'Редакция',
     readTime: a.read_time || '5 мин',
     tags: a.tags || [],
@@ -144,54 +145,36 @@ const News = () => {
             <ArrowUpDown className="w-4 h-4" />
             По популярности
           </Button>
-          
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">Режим:</span>
-            <Button
-              variant={!useInfiniteScroll ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                setUseInfiniteScroll(false);
-                setCurrentPage(1);
-              }}
-              className="transition-all duration-200"
-            >
-              Пагинация
-            </Button>
-            <Button
-              variant={useInfiniteScroll ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                setUseInfiniteScroll(true);
-                setVisibleCount(ITEMS_PER_PAGE);
-              }}
-              className="transition-all duration-200"
-            >
-              Бесконечный скролл
-            </Button>
-          </div>
         </div>
 
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {paginatedArticles.map((article, index) => (
-                <div
-                  key={article.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <NewsCard 
-                    article={article} 
-                    showDelete={isAdminOrEditor && dbArticles.length > 0}
-                    onDelete={handleDeleteArticle}
-                  />
-                </div>
-              ))}
-            </div>
+            {isDbLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <NewsCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {paginatedArticles.map((article, index) => (
+                  <div
+                    key={article.id}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <NewsCard 
+                      article={article} 
+                      showDelete={isAdminOrEditor && dbArticles.length > 0}
+                      onDelete={handleDeleteArticle}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             
-            {sortedArticles.length === 0 && (
+            {!isDbLoading && sortedArticles.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 Новости скоро появятся
               </div>

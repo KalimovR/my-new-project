@@ -2,21 +2,25 @@ import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { HeroSection } from '@/components/news/HeroSection';
 import { NewsCard } from '@/components/news/NewsCard';
+import { NewsCardSkeleton } from '@/components/news/NewsCardSkeleton';
 import { Sidebar } from '@/components/news/Sidebar';
 import { AdBanner } from '@/components/news/AdBanner';
+import { ArgumentOfTheWeek } from '@/components/discussions/ArgumentOfTheWeek';
 import { useArticles } from '@/hooks/useArticles';
 import { Button } from '@/components/ui/button';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { WebsiteStructuredData } from '@/components/seo/StructuredData';
 import { Analytics, SearchConsoleVerification } from '@/components/seo/Analytics';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 const Index = () => {
-  const { articles: dbArticles, isLoading } = useArticles();
+  // Limit to 8 articles for homepage, using cached query
+  const { articles: dbArticles, isLoading } = useArticles(undefined, 8);
   
   // Map database articles to the format expected by NewsCard
+  // Exclude featured materials so they never "съезжают" в блок "Последние новости"
   const mappedDbArticles = dbArticles
-    .filter(a => a.is_published)
+    .filter(a => a.is_published && !a.is_featured)
     .slice(0, 8)
     .map(a => ({
       id: a.id,
@@ -55,9 +59,13 @@ const Index = () => {
 
       {/* Main Content */}
       <section className="container mx-auto pb-10 sm:pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 sm:gap-8 lg:gap-10">
-          {/* Articles Grid */}
-          <div className="min-w-0 overflow-hidden">
+        {/* Argument of the Week */}
+        <ArgumentOfTheWeek />
+
+        {/* News Layout - Grid with proper alignment */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
+          {/* Articles Grid - Left column */}
+          <div className="min-w-0">
             <div className="flex items-center justify-between mb-5 sm:mb-8">
               <h2 className="text-xl sm:text-2xl md:text-3xl font-black">Последние новости</h2>
               <Link to="/news">
@@ -70,9 +78,10 @@ const Index = () => {
             </div>
             
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 sm:py-16">
-                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-primary animate-spin mb-4" />
-                <p className="text-muted-foreground text-sm sm:text-base">Загрузка новостей...</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <NewsCardSkeleton key={index} />
+                ))}
               </div>
             ) : mappedDbArticles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -101,10 +110,10 @@ const Index = () => {
             )}
           </div>
 
-          {/* Sidebar - appears below on mobile */}
-          <div className="min-w-0 overflow-hidden mt-4 lg:mt-0">
+          {/* Sidebar - Right column with sticky positioning */}
+          <aside className="min-w-0 lg:sticky lg:top-24 order-2 lg:order-none mt-4 lg:mt-0">
             <Sidebar />
-          </div>
+          </aside>
         </div>
       </section>
     </Layout>
