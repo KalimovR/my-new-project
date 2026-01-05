@@ -58,10 +58,11 @@ serve(async (req) => {
         type: "redirect",
         return_url: returnUrl || `${req.headers.get("origin")}/profile?payment=success`,
       },
-      description: "Премиум-подписка «Всевидящий» — 199 ₽/мес",
+      description: "Премиум-подписка «Всевидящий» — 99 ₽/мес",
       metadata: {
         user_id: user.id,
-        type: "premium_subscription",
+        plan: "premium",
+        period: "monthly",
       },
     };
 
