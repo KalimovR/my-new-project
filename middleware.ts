@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+// Vercel Edge Middleware for crawler detection
+// Works with Vite projects on Vercel
 
-// Crawler user agents that need OG tags
 const CRAWLER_USER_AGENTS = [
   'TelegramBot',
   'Twitterbot',
@@ -16,7 +16,7 @@ export const config = {
   matcher: '/article/:path*',
 };
 
-export default function middleware(request: NextRequest) {
+export default function middleware(request: Request) {
   const userAgent = request.headers.get('user-agent') || '';
   
   // Check if request is from a crawler
@@ -25,17 +25,17 @@ export default function middleware(request: NextRequest) {
   );
   
   if (isCrawler) {
-    // Extract slug from path
-    const pathname = request.nextUrl.pathname;
+    const url = new URL(request.url);
+    const pathname = url.pathname;
     const slug = pathname.replace('/article/', '');
     
     // Redirect crawlers to OG meta generator API
-    const ogUrl = new URL('/api/og', request.url);
+    const ogUrl = new URL('/api/og', url.origin);
     ogUrl.searchParams.set('slug', slug);
     
-    return NextResponse.rewrite(ogUrl);
+    return fetch(ogUrl.toString());
   }
   
-  // Regular users get the SPA
-  return NextResponse.next();
+  // Regular users continue to the SPA
+  return;
 }

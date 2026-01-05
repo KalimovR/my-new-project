@@ -1,12 +1,8 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://news-kontekst.ru';
 const SITE_NAME = 'Контекст';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function escapeHtml(text: string): string {
   return text
@@ -15,80 +11,6 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { slug } = req.query;
-  
-  if (!slug || typeof slug !== 'string') {
-    return res.status(400).send('Missing slug parameter');
-  }
-
-  const decodedSlug = decodeURIComponent(slug);
-
-  // Fetch article from Supabase
-  const supabase = createClient(supabaseUrl!, supabaseKey!);
-  
-  const { data: article, error } = await supabase
-    .from('articles')
-    .select('title, excerpt, image_url, category, published_at, author_name, slug')
-    .eq('slug', decodedSlug)
-    .eq('is_published', true)
-    .single();
-
-  if (error || !article) {
-    // Return default meta for missing articles
-    const html = generateHtml({
-      title: SITE_NAME,
-      description: 'Независимые новости и аналитика',
-      image: DEFAULT_IMAGE,
-      url: SITE_URL,
-      type: 'website',
-    });
-    return res.setHeader('Content-Type', 'text/html; charset=utf-8').send(html);
-  }
-
-  const categoryPaths: Record<string, string> = {
-    news: 'news',
-    analytics: 'analytics',
-    opinions: 'opinions',
-  };
-
-  const categoryNames: Record<string, string> = {
-    news: 'Новости',
-    analytics: 'Аналитика',
-    opinions: 'Мнения',
-  };
-
-  // Build canonical URL with clean path
-  const categoryPath = categoryPaths[article.category] || 'article';
-  const articleUrl = `${SITE_URL}/${categoryPath}/${article.slug}`;
-  
-  // Ensure image is a direct public URL
-  let imageUrl = article.image_url || DEFAULT_IMAGE;
-  
-  // If image is from Supabase storage, ensure it's public URL format
-  if (imageUrl.includes('supabase.co/storage')) {
-    // Convert to public URL format if needed
-    imageUrl = imageUrl.replace('/storage/v1/object/sign/', '/storage/v1/object/public/');
-  }
-
-  const html = generateHtml({
-    title: `${article.title} | ${SITE_NAME}`,
-    description: article.excerpt || 'Читайте на Контекст',
-    image: imageUrl,
-    url: articleUrl,
-    type: 'article',
-    publishedTime: article.published_at,
-    author: article.author_name,
-    section: categoryNames[article.category] || article.category,
-    redirectUrl: `${SITE_URL}/article/${article.slug}`,
-  });
-
-  res
-    .setHeader('Content-Type', 'text/html; charset=utf-8')
-    .setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400')
-    .send(html);
 }
 
 interface MetaOptions {
@@ -147,3 +69,96 @@ function generateHtml(meta: MetaOptions): string {
 </body>
 </html>`;
 }
+
+export default async function handler(request: Request) {
+  const url = new URL(request.url);
+  const slug = url.searchParams.get('slug');
+  
+  if (!slug) {
+    return new Response('Missing slug parameter', { status: 400 });
+  }
+
+  const decodedSlug = decodeURIComponent(slug);
+
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    const html = generateHtml({
+      title: SITE_NAME,
+      description: 'Независимые новости и аналитика',
+      image: DEFAULT_IMAGE,
+      url: SITE_URL,
+      type: 'website',
+    });
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  const { data: article, error } = await supabase
+    .from('articles')
+    .select('title, excerpt, image_url, category, published_at, author_name, slug')
+    .eq('slug', decodedSlug)
+    .eq('is_published', true)
+    .single();
+
+  if (error || !article) {
+    const html = generateHtml({
+      title: SITE_NAME,
+      description: 'Независимые новости и аналитика',
+      image: DEFAULT_IMAGE,
+      url: SITE_URL,
+      type: 'website',
+    });
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+
+  const categoryPaths: Record<string, string> = {
+    news: 'news',
+    analytics: 'analytics',
+    opinions: 'opinions',
+  };
+
+  const categoryNames: Record<string, string> = {
+    news: 'Новости',
+    analytics: 'Аналитика',
+    opinions: 'Мнения',
+  };
+
+  const categoryPath = categoryPaths[article.category] || 'article';
+  const articleUrl = `${SITE_URL}/${categoryPath}/${article.slug}`;
+  
+  let imageUrl = article.image_url || DEFAULT_IMAGE;
+  
+  if (imageUrl.includes('supabase.co/storage')) {
+    imageUrl = imageUrl.replace('/storage/v1/object/sign/', '/storage/v1/object/public/');
+  }
+
+  const html = generateHtml({
+    title: `${article.title} | ${SITE_NAME}`,
+    description: article.excerpt || 'Читайте на Контекст',
+    image: imageUrl,
+    url: articleUrl,
+    type: 'article',
+    publishedTime: article.published_at,
+    author: article.author_name,
+    section: categoryNames[article.category] || article.category,
+    redirectUrl: `${SITE_URL}/article/${article.slug}`,
+  });
+
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+    },
+  });
+}
+
+export const config = {
+  runtime: 'edge',
+};
