@@ -50,7 +50,7 @@ serve(async (req) => {
     // Create YooKassa payment
     const paymentData = {
       amount: {
-        value: "199.00",
+        value: "99.00",
         currency: "RUB",
       },
       capture: true,
