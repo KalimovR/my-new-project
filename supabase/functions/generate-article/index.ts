@@ -543,12 +543,31 @@ Modern, high contrast, cinematic lighting. No text overlay, no watermarks. Photo
         await sendProgress('image_done', { imageUrl });
         await sendProgress('saving', { message: 'Сохранение статьи...' });
 
-        // Generate slug
-        const slug = articleData.title
-          .toLowerCase()
-          .replace(/[^a-zа-яё0-9\s]/gi, "")
-          .replace(/\s+/g, "-")
-          .substring(0, 50) + "-" + Date.now().toString(36);
+        // Cyrillic to Latin transliteration map
+        const translitMap: Record<string, string> = {
+          'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+          'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+          'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+          'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+          'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+          'і': 'i', 'ї': 'yi', 'є': 'ye', 'ґ': 'g'
+        };
+
+        const transliterate = (text: string): string => {
+          return text
+            .toLowerCase()
+            .split('')
+            .map(char => translitMap[char] ?? char)
+            .join('');
+        };
+
+        // Generate slug with transliteration
+        const slug = transliterate(articleData.title)
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .substring(0, 60) + '-' + Date.now().toString(36);
 
         // Calculate actual reading time based on word count (average 250 words per minute for Russian text)
         const wordCount = articleData.content ? articleData.content.split(/\s+/).filter((w: string) => w.length > 0).length : 0;

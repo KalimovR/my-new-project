@@ -306,11 +306,31 @@ const Admin = () => {
   };
 
   const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-zа-яё0-9\s]/gi, '')
-      .replace(/\s+/g, '-')
-      .substring(0, 50) + '-' + Date.now().toString(36);
+    // Cyrillic to Latin transliteration map
+    const translitMap: Record<string, string> = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+      'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+      'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+      'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      // Ukrainian specific
+      'і': 'i', 'ї': 'yi', 'є': 'ye', 'ґ': 'g'
+    };
+
+    const transliterate = (text: string): string => {
+      return text
+        .toLowerCase()
+        .split('')
+        .map(char => translitMap[char] ?? char)
+        .join('');
+    };
+
+    return transliterate(title)
+      .replace(/[^a-z0-9\s-]/g, '') // Keep only ASCII letters, numbers, spaces, hyphens
+      .replace(/\s+/g, '-')         // Replace spaces with hyphens
+      .replace(/-+/g, '-')          // Remove duplicate hyphens
+      .replace(/^-|-$/g, '')        // Trim hyphens from start/end
+      .substring(0, 60) + '-' + Date.now().toString(36);
   };
 
   const resetForm = () => {
