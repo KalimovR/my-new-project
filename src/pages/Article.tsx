@@ -12,6 +12,7 @@ import { ArticleStructuredData, BreadcrumbStructuredData } from '@/components/se
 import { AuthorByline } from '@/components/article/AuthorByline';
 import { RelatedArticles } from '@/components/article/RelatedArticles';
 import { DiscussButton } from '@/components/article/DiscussButton';
+import ArticleDisclaimer from '@/components/article/ArticleDisclaimer';
 import { useAuth } from '@/hooks/useAuth';
 import { Clock, User, Calendar, ArrowLeft, Share2, Loader2, FileText, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
@@ -357,6 +358,9 @@ const Article = () => {
               <div className="prose prose-invert dark:prose-invert max-w-none text-base leading-relaxed" style={{ fontSize: '16px' }}>
                 {renderContent(article.content || '', !isAdminOrEditor)}
               </div>
+
+                 {/* Article Disclaimer */}
+              <ArticleDisclaimer />
 
               {/* Word count - only for admins/editors */}
               {isAdminOrEditor && (
