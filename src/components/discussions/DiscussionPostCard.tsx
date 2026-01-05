@@ -161,35 +161,23 @@ export const DiscussionPostCard = ({
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   {post.author_is_premium && <PremiumBadge size="sm" />}
                   <span className="font-semibold text-sm sm:text-base text-foreground">{post.author_name}</span>
-                  {/* Show only selected badge if user has one, otherwise show all badges */}
-                  {post.author_selected_badge ? (
-                    (() => {
-                      const info = badgeLabels[post.author_selected_badge];
-                      return info ? (
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[10px] sm:text-xs px-1.5 sm:px-2", info.color)}
-                        >
-                          {getBadgeIcon(info.icon)}
-                          <span className="hidden sm:inline">{info.label}</span>
-                        </Badge>
-                      ) : null;
-                    })()
-                  ) : (
-                    post.author_badges?.map((badge) => {
-                      const info = badgeLabels[badge];
-                      return info ? (
-                        <Badge
-                          key={badge}
-                          variant="outline"
-                          className={cn("text-[10px] sm:text-xs px-1.5 sm:px-2", info.color)}
-                        >
-                          {getBadgeIcon(info.icon)}
-                          <span className="hidden sm:inline">{info.label}</span>
-                        </Badge>
-                      ) : null;
-                    })
-                  )}
+                  {/* Show only ONE badge: selected badge OR first earned badge */}
+                  {(() => {
+                    // Determine which single badge to show
+                    const badgeToShow = post.author_selected_badge || post.author_badges?.[0];
+                    if (!badgeToShow) return null;
+                    
+                    const info = badgeLabels[badgeToShow];
+                    return info ? (
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] sm:text-xs px-1.5 sm:px-2", info.color)}
+                      >
+                        {getBadgeIcon(info.icon)}
+                        <span className="hidden sm:inline">{info.label}</span>
+                      </Badge>
+                    ) : null;
+                  })()}
                 </div>
                 <span className="text-[11px] sm:text-xs text-muted-foreground">{timeAgo}</span>
               </div>
