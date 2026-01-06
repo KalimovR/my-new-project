@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uuid } from "@/lib/uuid";
 
 export const useOnlinePresence = () => {
   useEffect(() => {
     const channel = supabase.channel('online-users', {
       config: {
         presence: {
-          key: crypto.randomUUID(),
+          key: uuid(),
         },
       },
     });

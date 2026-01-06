@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import { uuid } from "@/lib/uuid";
 
 interface PresenceState {
   [key: string]: {
@@ -17,7 +18,7 @@ export const OnlineUsersIndicator = () => {
     const channel = supabase.channel('online-users', {
       config: {
         presence: {
-          key: crypto.randomUUID(),
+          key: uuid(),
         },
       },
     });
