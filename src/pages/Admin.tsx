@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Eye, EyeOff, Users, FileText, Sparkles, Loader2, Link2, ExternalLink, MessageSquare, Mail, Search, Crown } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Users, FileText, Sparkles, Loader2, Link2, ExternalLink, MessageSquare, Mail, Search, Crown, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import { SubmissionsTab } from '@/components/admin/SubmissionsTab';
 import { DiscussionsTab } from '@/components/admin/DiscussionsTab';
 import { DiscussionModerationTab } from '@/components/admin/DiscussionModerationTab';
 import { OnlineUsersIndicator } from '@/components/admin/OnlineUsersIndicator';
+import { TelegramTab } from '@/components/admin/TelegramTab';
 
 interface Article {
   id: string;
@@ -903,6 +904,12 @@ const Admin = () => {
                 Источники AI
               </TabsTrigger>
             )}
+
+            <TabsTrigger value="telegram" className="gap-2">
+              <Send className="w-4 h-4" />
+              Telegram
+            </TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="articles">
@@ -1247,6 +1254,12 @@ const Admin = () => {
               </Card>
             </TabsContent>
           )}
+
+
+          <TabsContent value="telegram">
+            <TelegramTab articles={articles} />
+          </TabsContent>
+          
         </Tabs>
 
         {/* AI Generation Progress Dialog */}
