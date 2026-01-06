@@ -12,7 +12,7 @@ const ArticleDisclaimer = () => {
             Это анализ на основе открытых источников. Выводы — субъективное мнение редакции. 
             Ваше мнение в{' '}
             <Link 
-              to="/discussions" 
+              to="/obsuzhdeniya" 
               className="text-primary hover:underline"
             >
               «Обсуждениях»
@@ -23,7 +23,7 @@ const ArticleDisclaimer = () => {
           <p className="text-sm text-foreground/80 font-medium">
             Что вы думаете?{' '}
             <Link 
-              to="/discussions" 
+              to="/obsuzhdeniya" 
               className="text-primary hover:underline"
             >
               Обсудите в разделе «Обсуждения»
