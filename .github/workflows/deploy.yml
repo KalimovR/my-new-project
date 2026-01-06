@@ -1,0 +1,18 @@
+name: Deploy to Yandex Cloud
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.YC_HOST }}
+          username: ${{ secrets.YC_USER }}
+          key: ${{ secrets.YC_SSH_KEY }}
+          script: |
+            /usr/local/bin/deploy_kontekst.sh
