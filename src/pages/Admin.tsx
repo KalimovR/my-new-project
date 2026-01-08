@@ -904,12 +904,10 @@ const Admin = () => {
                 Источники AI
               </TabsTrigger>
             )}
-
             <TabsTrigger value="telegram" className="gap-2">
               <Send className="w-4 h-4" />
               Telegram
             </TabsTrigger>
-            
           </TabsList>
 
           <TabsContent value="articles">
@@ -1255,11 +1253,9 @@ const Admin = () => {
             </TabsContent>
           )}
 
-
           <TabsContent value="telegram">
             <TelegramTab articles={articles} />
           </TabsContent>
-          
         </Tabs>
 
         {/* AI Generation Progress Dialog */}

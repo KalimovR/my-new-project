@@ -318,6 +318,50 @@ serve(async (req) => {
 
     console.log(`Article created successfully: ${article.id}`);
 
+    // Create a new voting poll for the next round
+    console.log("Creating new content vote for next round...");
+    
+    const newVoteTopics = [
+      "Скрытые переговоры Китая и ЕС",
+      "Финансирование климатических активистов",
+      "Связи Big Tech с разведками",
+      "Криптовалютные манипуляции хедж-фондов",
+      "Теневые лоббисты в Брюсселе",
+      "Нефтяные картели и политика ОПЕК+",
+      "Фармацевтические патенты и ВОЗ",
+      "Военно-промышленный комплекс США",
+      "Цифровые валюты центробанков",
+      "Ядерная энергетика: ренессанс или риски",
+      "Агрохолдинги и продовольственная безопасность",
+      "Редкоземельные металлы: новая нефть",
+    ];
+
+    // Shuffle and pick 4 random topics (excluding the one just generated)
+    const availableTopics = newVoteTopics.filter(t => t !== winningTopic);
+    const shuffled = availableTopics.sort(() => Math.random() - 0.5);
+    const selectedTopics = shuffled.slice(0, 4);
+
+    const newEndsAt = new Date();
+    newEndsAt.setHours(newEndsAt.getHours() + 72);
+
+    const { data: newVote, error: newVoteError } = await supabaseAdmin
+      .from('content_votes')
+      .insert({
+        title: 'Какую тему раскрыть следующей?',
+        description: 'Премиум-пользователи голосуют за следующий большой инсайд',
+        options: selectedTopics.map(text => ({ text })),
+        is_active: true,
+        ends_at: newEndsAt.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (newVoteError) {
+      console.error("Failed to create new vote:", newVoteError);
+    } else {
+      console.log(`New vote created: ${newVote.id}`);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -328,6 +372,7 @@ serve(async (req) => {
         },
         winningTopic,
         voteCount: maxVotes,
+        newVoteId: newVote?.id,
       }),
       {
         status: 200,
