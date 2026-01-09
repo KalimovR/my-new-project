@@ -76,6 +76,7 @@ const Admin = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
+  const [aiExclusions, setAiExclusions] = useState('');
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiCategory, setAiCategory] = useState<'news' | 'analytics' | 'opinions'>('news');
   
@@ -549,6 +550,7 @@ const Admin = () => {
           body: JSON.stringify({
             category: aiCategory,
             topic: aiTopic || undefined,
+            exclusions: aiExclusions || undefined,
           }),
         }
       );
@@ -601,6 +603,7 @@ const Admin = () => {
                     setIsGenerating(false);
                     setGenerationStep('idle');
                     setAiTopic('');
+                    setAiExclusions('');
                     fetchArticles();
                   }, 2000);
                 }
@@ -838,15 +841,29 @@ const Admin = () => {
                   ИИ Grok создаст статью на основе темы
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <Label htmlFor="ai-topic">Тема (необязательно)</Label>
-                <Input
-                  id="ai-topic"
-                  value={aiTopic}
-                  onChange={(e) => setAiTopic(e.target.value)}
-                  placeholder="Оставьте пустым для автовыбора темы"
-                  className="mt-2"
-                />
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ai-topic">Тема (необязательно)</Label>
+                  <Input
+                    id="ai-topic"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    placeholder="Оставьте пустым для автовыбора темы"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ai-exclusions">Исключения (необязательно)</Label>
+                  <Textarea
+                    id="ai-exclusions"
+                    value={aiExclusions}
+                    onChange={(e) => setAiExclusions(e.target.value)}
+                    placeholder="Что НЕ упоминать: темы, персоны, источники (через запятую)"
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    ИИ не будет использовать информацию и источники, связанные с указанными темами
+                  </p>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAiDialogOpen(false)}>

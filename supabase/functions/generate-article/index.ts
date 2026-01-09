@@ -9,6 +9,12 @@ const corsHeaders = {
 interface GenerateRequest {
   category: "news" | "analytics" | "opinions";
   topic?: string;
+  exclusions?: string;
+}
+
+interface WebSearchResult {
+  content: string;
+  sources: string[];
 }
 
 // Authors with their specializations and unique writing styles
@@ -116,6 +122,63 @@ function getCurrentDateInfo(): { fullDate: string; dayOfWeek: string; year: numb
   };
 }
 
+// Function to search the web using OpenRouter with web search capability
+async function searchWeb(topic: string, exclusions: string, apiKey: string): Promise<WebSearchResult> {
+  console.log("Searching web for topic:", topic);
+  
+  const exclusionNote = exclusions 
+    ? `\n\nВАЖНО: НЕ используй информацию и источники, связанные с: ${exclusions}` 
+    : '';
+  
+  try {
+    const searchResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "perplexity/sonar-pro",
+        messages: [
+          { 
+            role: "system", 
+            content: `Ты — исследователь новостей. Найди актуальную информацию по теме и предоставь факты с указанием источников.${exclusionNote}` 
+          },
+          { 
+            role: "user", 
+            content: `Найди актуальные новости и факты на тему: "${topic}". Предоставь 5-10 ключевых фактов с указанием источников (название источника, дата). Ответ на русском языке.` 
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error("Web search error:", searchResponse.status, errorText);
+      return { content: "", sources: [] };
+    }
+
+    const searchData = await searchResponse.json();
+    const searchContent = searchData.choices?.[0]?.message?.content || "";
+    
+    // Extract sources from the response (common patterns)
+    const sourceMatches = searchContent.match(/(?:по данным|источник:|according to|source:)\s*([^,\n.]+)/gi) || [];
+    const sources = sourceMatches.map((s: string) => s.replace(/(?:по данным|источник:|according to|source:)\s*/i, '').trim());
+    
+    console.log("Web search completed. Found sources:", sources.length);
+    
+    return { 
+      content: searchContent, 
+      sources: [...new Set(sources)] as string[]
+    };
+  } catch (error) {
+    console.error("Web search failed:", error);
+    return { content: "", sources: [] };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -168,7 +231,7 @@ serve(async (req) => {
       });
     }
 
-    const { category, topic }: GenerateRequest = await req.json();
+    const { category, topic, exclusions }: GenerateRequest = await req.json();
 
     // Set up SSE for progress updates
     const encoder = new TextEncoder();
@@ -197,6 +260,21 @@ serve(async (req) => {
           )
           .join('\n');
 
+        // Check if we have enough sources or need web search
+        let webSearchResults: WebSearchResult = { content: "", sources: [] };
+        let webSearchNote = "";
+        
+        // If topic is provided and we have few/no sources, do web search
+        if (topic && (!sourcesData || sourcesData.length < 3)) {
+          await sendProgress('text', { message: 'Поиск информации в интернете...' });
+          webSearchResults = await searchWeb(topic, exclusions || "", OPENROUTER_API_KEY);
+          
+          if (webSearchResults.content) {
+            webSearchNote = `\n\n=== ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ИЗ ИНТЕРНЕТА ===\n${webSearchResults.content}\n\nИсточники: ${webSearchResults.sources.join(', ')}`;
+            console.log("Web search added to context");
+          }
+        }
+
         const categoryNames: Record<string, string> = {
           news: "новость",
           analytics: "аналитическую статью",
@@ -209,6 +287,11 @@ serve(async (req) => {
         // Different prompts for different categories
         let systemPrompt: string;
         let userPrompt: string;
+
+        // Build exclusions note for prompts
+        const exclusionsNote = exclusions 
+          ? `\n\nИСКЛЮЧЕНИЯ (НЕ УПОМИНАТЬ, НЕ ИСПОЛЬЗОВАТЬ): ${exclusions}. Не бери информацию из источников, связанных с этими темами/персонами.`
+          : '';
 
         // Extended list of sources for all categories
         const extendedSources = `Reuters.com, Bloomberg.com, Economist.com, Ft.com, Politico.com, Wired.com, Meduza.io, Rbc.ru, The Bell, Kommersant.ru, Novayagazeta.eu, Aljazeera.com, Foreignaffairs.com, Theatlantic.com, Vice.com, Nytimes.com, Washingtonpost.com, Guardian.com, BBC.com, Dw.com, France24.com, Euronews.com, Axios.com, Vox.com, Techcrunch.com, Arstechnica.com, Theverge.com, Cnbc.com, Forbes.com, Wsj.com, Apnews.com, Afp.com, Interfax.ru, Tass.ru, Ria.ru, Lenta.ru, Vedomosti.ru, Gazeta.ru, Znak.com, Currenttime.tv, Bne.eu, Themoscowtimes.com`;
@@ -254,7 +337,7 @@ serve(async (req) => {
 3. Все факты о лидерах, конфликтах, экономике должны соответствовать реалиям ${dateInfo.year} года.
 
 ИСТОЧНИКИ ДЛЯ АНАЛИЗА (за последние 3-12 месяцев):
-${allSources}
+${allSources}${exclusionsNote}${webSearchNote}
 
 ВАЖНО: Если не можешь подтвердить факт — указывай "по данным [источник]" или "согласно неподтверждённой информации".`;
 
@@ -312,7 +395,7 @@ ${allSources}
 3. Все факты о лидерах и конфликтах — реалии ${dateInfo.year} года.
 
 ИСТОЧНИКИ ДЛЯ ВДОХНОВЕНИЯ:
-${allSources}
+${allSources}${exclusionsNote}${webSearchNote}
 
 ВАЖНО: НЕ ВЫДУМЫВАЙ цифры. Используй общие фразы ("по ощущениям многих", "очевидно что", "эксперты отмечают").`;
 
@@ -361,7 +444,7 @@ ${allSources}
 4. Все политические факты — реалии ${dateInfo.year} года.
 
 ИСТОЧНИКИ:
-${allSources}
+${allSources}${exclusionsNote}${webSearchNote}
 
 ВАЖНО: НЕ ВЫДУМЫВАЙ цифры. Используй общие фразы ("демонстрирует рост", "по данным экспертов").
 
